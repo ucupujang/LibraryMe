@@ -32,18 +32,32 @@ header.top p{margin:4px 0 0;color:var(--muted)}
 .bar.s{grid-template-columns:1fr auto}
 .bar input,.bar select{padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;min-width:0}
 @media (max-width:700px){.bar{grid-template-columns:1fr 1fr}.bar input{grid-column:1/-1}}
-.count{max-width:1100px;margin:0 auto;padding:0 16px 8px;color:var(--muted);font-size:.9rem}
+.crow{max-width:1100px;margin:0 auto;padding:0 16px 8px;display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap}
+.count{flex:1 1 260px;color:var(--muted);font-size:.9rem}
 .grid{max-width:1100px;margin:0 auto;padding:8px 16px 32px;display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
 .sec{max-width:1100px;margin:8px auto 0;padding:0 16px;font-size:1.1rem}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:transform .12s}
+.card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:transform .18s ease,box-shadow .18s ease}
 a.card{text-decoration:none;color:inherit}
-.card:hover{transform:translateY(-3px)}
+/* Menyembul saat kursor menyentuh. Warna bayangan (--sh) diisi dari bahasa file, opasitas 20% */
+@media (hover:hover){
+  .card:hover{transform:scale(1.06);z-index:2;box-shadow:var(--sh,0 10px 24px rgba(120,120,120,.2))}
+  .grid.list .card:hover{transform:scale(1.02)}
+}
+@media (prefers-reduced-motion:reduce){.card{transition:none}.card:hover{transform:none!important}}
 .cover{aspect-ratio:2/3;background:var(--line);display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;color:var(--muted);font-size:.85rem;overflow:hidden}
 .cover img{width:100%;height:100%;object-fit:cover;display:block}
 .meta{padding:10px 12px 12px}
 .meta b{font-size:.95rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .meta span{color:var(--muted);font-size:.82rem}
 .meta .m2{margin-top:6px}
+.ex{display:none}
+/* Tampilan daftar */
+.grid.list{grid-template-columns:1fr;gap:10px}
+.grid.list .card{flex-direction:row}
+.grid.list .cover{width:64px;flex:none;align-self:flex-start;padding:0;font-size:0}
+.grid.list .meta{flex:1;min-width:0;padding:10px 14px}
+.grid.list .ex{display:block;margin-top:4px}
+.ex span{display:block;color:var(--muted);font-size:.8rem}
 .empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:48px 16px}
 .more{display:block;margin:0 auto 48px;padding:10px 22px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;font:inherit;cursor:pointer}
 .sb{display:inline-block;font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:99px;border:1px solid currentColor;color:var(--muted)}
@@ -119,7 +133,10 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:0 16px 28px}
     <select id="fFormat"><option value="">Semua format</option></select>
     <select id="fBahasa"><option value="">Semua bahasa file</option></select>
   </div>
-  <div class="count" id="count"></div>
+  <div class="crow">
+    <div class="count" id="count"></div>
+    <div class="seg" id="segT_home" role="group" aria-label="Tampilan katalog"></div>
+  </div>
   <main class="grid" id="grid"><div class="empty">Memuat katalog...</div></main>
   <button class="more" id="more" hidden>Tampilkan lebih banyak</button>
 </section>
@@ -130,7 +147,10 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:0 16px 28px}
     <input id="qs" type="search" placeholder="Cari seri, penulis, atau judul...">
     <select id="fStatus"><option value="">Semua status seri</option></select>
   </div>
-  <div class="count" id="countSeri"></div>
+  <div class="crow">
+    <div class="count" id="countSeri"></div>
+    <div class="seg" id="segT_seri" role="group" aria-label="Tampilan daftar seri"></div>
+  </div>
   <main class="grid" id="gridSeri"></main>
   <div id="lepasWrap" hidden>
     <h2 class="sec">Buku lepas</h2>
@@ -153,7 +173,7 @@ const CONFIG = {
   // URL CSV dari Google Sheet yang dipublikasikan (File > Bagikan > Publikasikan ke web > CSV).
   // Kosongkan untuk melihat data contoh.
   SHEET_CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRy2JBmpWFJpHiSLl38r78EY6MtSO7x9FE9t-9lYQVoUb_UD8zdK-dHoZDKhbw3JPzSBBrPhLswpHGr/pub?gid=499449472&single=true&output=csv",
-  jumlahTerbaru: 10,   // jumlah buku di bagian "Baru ditambahkan" pada beranda
+  jumlahTerbaru: 6,    // jumlah buku di bagian "Baru ditambahkan" pada beranda
   perHalaman: 24,      // jumlah hasil per halaman saat mencari atau memakai filter
   penandaTunggal: "tunggal", // isi kolom seri untuk buku lepas (kolom seri kosong juga dianggap lepas)
   catatanKaki: "Pastikan kamu punya hak untuk mengakses dan membagikan file yang ditautkan."
@@ -263,6 +283,7 @@ function bangunBuku(teks,penanda){
     const sv=[...s.vols].reverse().find(v=>v.status_seri);
     s.status=sv?sv.status_seri:"";
     s.genreList=[...new Set(s.vols.flatMap(v=>v.genreList))];
+    s.bahasaList=[...new Set(s.vols.flatMap(v=>v.bahasaList))];
     s.vols.forEach(v=>{v._seriSlug=s.slug;});
   });
   const lepas=buku.filter(b=>!b._seriKey);
@@ -295,6 +316,32 @@ $("#seg").addEventListener("click",e=>{
   try{localStorage.setItem("modeJudul",mode)}catch(err){}
   buatToggle(); tampil=CONFIG.perHalaman; gambar();
 });
+
+/* ---------- Tampilan kotak atau daftar, dan warna bayangan ---------- */
+const TAMPIL={home:"grid",seri:"grid"};
+try{for(const k in TAMPIL){const v=localStorage.getItem("tampil_"+k); if(v==="grid"||v==="list") TAMPIL[k]=v;}}catch(e){}
+const kelasGrid = k => "grid"+(TAMPIL[k]==="list"?" list":"");
+const lebarThumb = k => TAMPIL[k]==="list"?160:300;
+function buatSegTampil(k){
+  $("#segT_"+k).innerHTML=[["grid","Kotak"],["list","Daftar"]].map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="${TAMPIL[k]===v}">${t}</button>`).join("");
+}
+/* Bayangan saat kursor menyentuh kartu: hijau = Indonesia, kuning = Inggris, merah = Jepang/raw,
+   abu-abu = tanpa keterangan bahasa. Opasitas 20%. Lebih dari satu bahasa = bayangan bercabang. */
+const WARNA_BAHASA={id:"34,197,94",en:"234,179,8",jp:"239,68,68"};
+const WARNA_ABU="120,120,120";
+function bayangan(list){
+  const ada=new Set();
+  (list||[]).forEach(x=>{
+    const t=String(x).toLowerCase();
+    if(/indonesia/.test(t)) ada.add("id");
+    else if(/inggris|english/.test(t)) ada.add("en");
+    else if(/jepang|japan|\braw\b/.test(t)) ada.add("jp");
+  });
+  const k=["id","en","jp"].filter(x=>ada.has(x));
+  if(!k.length) return `0 10px 24px rgba(${WARNA_ABU},.2)`;
+  const geser=k.length===1?[0]:k.length===2?[-7,7]:[-9,0,9];
+  return k.map((x,i)=>`${geser[i]}px 10px 22px rgba(${WARNA_BAHASA[x]},.2)`).join(", ");
+}
 
 /* ---------- Potongan tampilan ---------- */
 /* opt.w = lebar thumbnail, opt.teks = teks pengganti bila tidak ada gambar (false = kosong) */
@@ -351,11 +398,14 @@ function statusHTML(b){
 
 /* Kartu buku (beranda, halaman seri, buku lepas). opt.jilid = tampilkan "Jilid ke-N" */
 function kartuBuku(b,opt){
+  opt=opt||{};
   const n=(b.urutan_dalam_seri||"").trim();
-  const baris=opt&&opt.jilid&&n?`Jilid ke-${esc(n)}`:esc(b.penulis);
-  return `<article class="card" data-id="${esc(b._id)}">
-    <div class="cover">${coverHTML(b)}</div>
-    <div class="meta"><b lang="${jl(b)}">${esc(jd(b))}</b><span>${baris}</span></div>
+  const baris=opt.jilid&&n?`Jilid ke-${esc(n)}`:esc(b.penulis);
+  /* Baris tambahan, hanya terlihat pada tampilan daftar */
+  const ex=[b.seriNama?(n?`Jilid ke-${n} · ${b.seriNama}`:b.seriNama):"",b.genreList.join(" · "),b.formatList.join(" + ")].filter(Boolean);
+  return `<article class="card" data-id="${esc(b._id)}" style="--sh:${esc(bayangan(b.bahasaList))}">
+    <div class="cover">${coverHTML(b,{w:opt.w})}</div>
+    <div class="meta"><b lang="${jl(b)}">${esc(jd(b))}</b><span>${baris}</span>${ex.length?`<div class="ex">${ex.map(l=>`<span>${esc(l)}</span>`).join("")}</div>`:""}</div>
   </article>`;
 }
 
@@ -412,7 +462,9 @@ function gambar(){
     more=h.length>tampil;
     h=h.slice(0,tampil);
   }
-  $("#grid").innerHTML=h.length?h.map(b=>kartuBuku(b)).join(""):'<div class="empty">Tidak ada buku yang cocok.</div>';
+  $("#grid").className=kelasGrid("home");
+  const w=lebarThumb("home");
+  $("#grid").innerHTML=h.length?h.map(b=>kartuBuku(b,{w})).join(""):'<div class="empty">Tidak ada buku yang cocok.</div>';
   $("#more").hidden=!more;
 }
 
@@ -424,10 +476,11 @@ function tampilHome(){
 }
 
 /* ---------- Daftar Seri ---------- */
-function kartuSeriDaftar(s){
-  return `<a class="card" href="#/seri/${esc(s.slug)}">
-    <div class="cover">${coverHTML(s.sampul,{w:300,teks:s.nama})}</div>
-    <div class="meta"><b>${esc(s.nama)}</b><span>${s.vols.length} jilid</span>${statusSeri(s.status)?`<div class="m2">${badgeSeri(s.status)}</div>`:""}</div>
+function kartuSeriDaftar(s,w){
+  const ex=[[s.penulis,s.ilustrator].filter(Boolean).join(" · "),s.genreList.join(" · ")].filter(Boolean);
+  return `<a class="card" href="#/seri/${esc(s.slug)}" style="--sh:${esc(bayangan(s.bahasaList))}">
+    <div class="cover">${coverHTML(s.sampul,{w:w||300,teks:s.nama})}</div>
+    <div class="meta"><b>${esc(s.nama)}</b><span>${s.vols.length} jilid</span>${statusSeri(s.status)?`<div class="m2">${badgeSeri(s.status)}</div>`:""}${ex.length?`<div class="ex">${ex.map(l=>`<span>${esc(l)}</span>`).join("")}</div>`:""}</div>
   </a>`;
 }
 function gambarSeri(){
@@ -438,9 +491,12 @@ function gambarSeri(){
   });
   const ll=fs?[]:lepas.filter(b=>cocokQ(q,teksBuku(b))).sort((a,b)=>jd(a).localeCompare(jd(b),"id"));
   $("#countSeri").textContent=`${ss.length} seri`+(lepas.length&&!fs?` dan ${ll.length} buku lepas`:"");
-  $("#gridSeri").innerHTML=ss.length?ss.map(kartuSeriDaftar).join(""):'<div class="empty">Tidak ada seri yang cocok.</div>';
+  const w=lebarThumb("seri");
+  $("#gridSeri").className=kelasGrid("seri");
+  $("#gridLepas").className=kelasGrid("seri");
+  $("#gridSeri").innerHTML=ss.length?ss.map(s=>kartuSeriDaftar(s,w)).join(""):'<div class="empty">Tidak ada seri yang cocok.</div>';
   $("#lepasWrap").hidden=!ll.length;
-  $("#gridLepas").innerHTML=ll.map(b=>kartuBuku(b)).join("");
+  $("#gridLepas").innerHTML=ll.map(b=>kartuBuku(b,{w})).join("");
 }
 function tampilDaftar(){
   lihat("daftar"); navAktif("nSeri");
@@ -564,6 +620,15 @@ window.addEventListener("hashchange",rute);
 ["#q","#fGenre","#fFormat","#fBahasa"].forEach(s=>$(s).addEventListener("input",()=>{tampil=CONFIG.perHalaman;gambar()}));
 ["#qs","#fStatus"].forEach(s=>$(s).addEventListener("input",gambarSeri));
 $("#more").onclick=()=>{tampil+=CONFIG.perHalaman;gambar()};
+["home","seri"].forEach(k=>{
+  $("#segT_"+k).addEventListener("click",e=>{
+    const t=e.target.closest("button"); if(!t) return;
+    TAMPIL[k]=t.dataset.v;
+    try{localStorage.setItem("tampil_"+k,TAMPIL[k])}catch(err){}
+    buatSegTampil(k);
+    if(k==="home") gambar(); else gambarSeri();
+  });
+});
 document.addEventListener("click",e=>{
   const k=e.target.closest(".card[data-id]"); if(!k) return;
   const b=buku.find(x=>x._id===k.dataset.id); if(b) popup(b);
@@ -601,6 +666,8 @@ $("#judulSitus").textContent=CONFIG.judulSitus;
 $("#subSitus").textContent=CONFIG.subSitus;
 $("#foot").textContent=CONFIG.catatanKaki;
 buatToggle();
+buatSegTampil("home");
+buatSegTampil("seri");
 muat();
 </script>
 </body>
