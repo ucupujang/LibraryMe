@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perpustakaan</title>
+<style>
+:root{
+  --bg:#f6f5f2;--card:#fff;--ink:#1d1d1f;--muted:#6b6b70;--line:#e4e2dc;
+  --accent:#3b5bdb;--accent-ink:#fff;--ok:#2b8a3e;--warn:#c2680a;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#141416;--card:#1e1e22;--ink:#ececee;--muted:#9a9aa2;--line:#2c2c32;--accent:#748ffc;--accent-ink:#10131f;--ok:#69db7c;--warn:#ffa94d}
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP","Hiragino Sans","Yu Gothic",Meiryo,sans-serif}
+a{color:var(--accent)}
+header.top{padding:28px 16px 8px;max-width:1100px;margin:0 auto}
+header.top h1{margin:0;font-size:1.6rem}
+header.top p{margin:4px 0 0;color:var(--muted)}
+
+/* Halaman awal */
+.tools{max-width:1100px;margin:0 auto;padding:8px 16px 0;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;color:var(--muted);font-size:.9rem}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)}
+.seg button{border:0;background:none;color:var(--ink);padding:7px 14px;font:inherit;font-size:.88rem;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.bar{max-width:1100px;margin:0 auto;padding:12px 16px;display:grid;gap:8px;grid-template-columns:1fr repeat(4,auto)}
+.bar input,.bar select{padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;min-width:0}
+@media (max-width:700px){.bar{grid-template-columns:1fr 1fr}.bar input{grid-column:1/-1}}
+.count{max-width:1100px;margin:0 auto;padding:0 16px 8px;color:var(--muted);font-size:.9rem}
+.grid{max-width:1100px;margin:0 auto;padding:8px 16px 40px;display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:transform .12s}
+.card:hover{transform:translateY(-3px)}
+.cover{aspect-ratio:2/3;background:var(--line);display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;color:var(--muted);font-size:.85rem;overflow:hidden}
+.cover img{width:100%;height:100%;object-fit:cover;display:block}
+.meta{padding:10px 12px 12px}
+.meta b{font-size:.95rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.meta span{color:var(--muted);font-size:.82rem}
+.empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:48px 16px}
+.more{display:block;margin:0 auto 48px;padding:10px 22px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;font:inherit;cursor:pointer}
+
+/* Elemen bersama */
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.pill{font-size:.78rem;padding:3px 10px;border-radius:99px;color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.syn{white-space:pre-line;margin:0 0 14px}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{display:inline-block;padding:9px 14px;border-radius:8px;background:var(--accent);color:var(--accent-ink);text-decoration:none;font-weight:600;font-size:.9rem}
+.btn.alt{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.note{font-size:.84rem;margin:10px 0 0;color:var(--muted)}
+.note.ok{color:var(--ok)}.note.warn{color:var(--warn)}
+
+/* Popup */
+dialog{border:none;border-radius:14px;padding:0;max-width:720px;width:calc(100% - 24px);max-height:calc(100dvh - 24px);overflow:auto;background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+.d{display:grid;grid-template-columns:200px 1fr;gap:20px;padding:20px}
+@media (max-width:560px){.d{grid-template-columns:1fr}.d .cover{max-width:200px}}
+.d h2{margin:0 0 2px;font-size:1.25rem;line-height:1.3}
+.d .by{color:var(--muted);margin:0 0 10px;font-size:.92rem}
+.clamp{display:-webkit-box;-webkit-line-clamp:8;-webkit-box-orient:vertical;overflow:hidden}
+.x{position:absolute;right:12px;top:8px;background:none;border:none;color:var(--muted);font-size:1.6rem;cursor:pointer;z-index:1}
+
+/* Halaman penuh */
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+.back{display:inline-block;margin-bottom:16px;text-decoration:none;font-weight:600}
+.dp{display:grid;grid-template-columns:260px 1fr;gap:28px;margin-bottom:24px}
+@media (max-width:640px){.dp{grid-template-columns:1fr}.dp .cover{max-width:240px}}
+.dp h2{margin:0 0 4px;font-size:1.6rem;line-height:1.25}
+.dp .by{color:var(--muted);margin:0 0 12px}
+.wrap h3{margin:28px 0 10px;font-size:1.1rem}
+.info{display:grid;grid-template-columns:minmax(110px,190px) 1fr;gap:8px 16px;margin:0}
+.info dt{color:var(--muted);font-size:.9rem}
+.info dd{margin:0;overflow-wrap:anywhere}
+.info .pills{margin:0}
+.st{font-weight:600}.st.pub{color:var(--ok)}.st.priv{color:var(--warn)}
+.series{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px}
+.sc{position:relative;display:block;aspect-ratio:2/3;border-radius:10px;overflow:hidden;background:var(--line);text-decoration:none;color:#fff}
+.sc.cur{outline:3px solid var(--accent);outline-offset:2px}
+.scv{position:absolute;inset:0}
+.scv img{width:100%;height:100%;object-fit:cover;display:block}
+.sg{position:absolute;left:0;right:0;bottom:0;padding:34px 8px 8px;background:linear-gradient(to top,rgba(0,0,0,.88),rgba(0,0,0,.55) 55%,rgba(0,0,0,0))}
+.sg small{display:block;font-size:.68rem;opacity:.8}
+.sg b{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-size:.8rem;line-height:1.25}
+footer{text-align:center;color:var(--muted);font-size:.8rem;padding:0 16px 28px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1 id="judulSitus">Perpustakaan</h1>
+  <p id="subSitus"></p>
+</header>
+
+<section id="home">
+  <div class="tools">
+    <span>Tampilkan judul dalam bahasa:</span>
+    <div class="seg" id="seg" role="group" aria-label="Bahasa judul"></div>
+  </div>
+  <div class="bar">
+    <input id="q" type="search" placeholder="Cari judul, penulis, ilustrator, seri, atau genre...">
+    <select id="fGenre"><option value="">Semua genre</option></select>
+    <select id="fFormat"><option value="">Semua format</option></select>
+    <select id="fBahasa"><option value="">Semua bahasa file</option></select>
+    <select id="urut">
+      <option value="judul">Urut: Judul A-Z</option>
+      <option value="seri">Urut: Seri</option>
+      <option value="penulis">Urut: Penulis</option>
+      <option value="baru">Urut: Terbaru ditambah</option>
+    </select>
+  </div>
+  <div class="count" id="count"></div>
+  <main class="grid" id="grid"><div class="empty">Memuat katalog...</div></main>
+  <button class="more" id="more" hidden>Tampilkan lebih banyak</button>
+</section>
+
+<section id="page" hidden></section>
+
+<dialog id="dlg"><button class="x" id="tutup" aria-label="Tutup">&times;</button><div id="isi"></div></dialog>
+
+<footer id="foot"></footer>
+
+<script>
+/* ============ PENGATURAN: edit bagian ini saja ============ */
+const CONFIG = {
+  judulSitus: "Perpustakaan",
+  subSitus: "Katalog buku. File disimpan di Google Drive masing-masing pemilik.",
+  // URL CSV dari Google Sheet yang dipublikasikan (File > Bagikan > Publikasikan ke web > CSV).
+  // Kosongkan untuk melihat data contoh.
+  SHEET_CSV_URL: "",
+  perHalaman: 48,
+  catatanKaki: "Pastikan kamu punya hak untuk mengakses dan membagikan file yang ditautkan."
+};
+/* ========================================================== */
+
+const DEMO = `judul,Judul (Jepang),Judul (Inggris),penulis,Ilustrator,seri,Urutan dalam Seri,sinopsis,genre,bahasa,tahun,cover,link_pdf,link_epub,status,kontak
+Contoh Buku Satu,サンプル一,Sample Book One,Penulis A,Ilustrator X,Seri Contoh,1,Ini sinopsis contoh. Ganti dengan data dari Sheet kamu.,Fantasi; Petualangan,Indonesia; Inggris,2021,,https://drive.google.com/file/d/ID_FILE_1/view,https://drive.google.com/file/d/ID_FILE_2/view,publik,
+Contoh Buku Dua,サンプル二,Sample Book Two,Penulis A,Ilustrator X,Seri Contoh,2,Sinopsis buku kedua.,Fantasi,Indonesia,2022,,https://drive.google.com/file/d/ID_FILE_3/view,,privat,https://wa.me/6281234567890
+Buku Lepas,,Standalone,Penulis B,,,,Sinopsis buku tanpa seri.,Sastra,Indonesia,2019,,,https://drive.google.com/file/d/ID_FILE_4/view,publik,`;
+
+/*PURE_START*/
+/* ---------- CSV parser (mendukung tanda kutip dan baris baru) ---------- */
+function parseCSV(t){
+  const rows=[];let r=[],c="",q=false;
+  for(let i=0;i<t.length;i++){
+    const ch=t[i];
+    if(q){
+      if(ch=='"'){ if(t[i+1]=='"'){c+='"';i++} else q=false }
+      else c+=ch;
+    }else{
+      if(ch=='"') q=true;
+      else if(ch==","){r.push(c);c=""}
+      else if(ch=="\n"||ch=="\r"){ if(ch=="\r"&&t[i+1]=="\n")i++; r.push(c);c="";rows.push(r);r=[] }
+      else c+=ch;
+    }
+  }
+  if(c!==""||r.length){r.push(c);rows.push(r)}
+  return rows.filter(x=>x.some(v=>v.trim()!==""));
+}
+
+/* "Judul (Jepang)" -> judul_jepang, "Urutan dalam Seri" -> urutan_dalam_seri */
+const norm = h => String(h).normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");
+const slugify = s => norm(s).replace(/_/g,"-")||"buku";
+const splitList = s => String(s||"").split(/[;,]/).map(x=>x.trim()).filter(Boolean);
+
+function idDrive(s){
+  if(!s) return "";
+  s=s.trim();
+  const m=s.match(/\/d\/([\w-]{20,})/)||s.match(/[?&]id=([\w-]{20,})/)||s.match(/^([\w-]{25,})$/);
+  return m?m[1]:"";
+}
+function urlCover(s,w){
+  s=(s||"").trim();
+  if(!s) return "";
+  const id=idDrive(s);
+  if(id) return `https://drive.google.com/thumbnail?id=${id}&sz=w${w||500}`;
+  return /^https?:\/\//.test(s)?s:"";
+}
+const amanUrl = u => /^https?:\/\//i.test((u||"").trim()) ? u.trim() : "";
+
+function bangunBuku(teks){
+  teks=String(teks).replace(/^﻿/,"");
+  const rows=parseCSV(teks);
+  if(!rows.length) return {heads:[],buku:[],error:"Data kosong. Pastikan sheet yang dipublikasikan adalah sheet Katalog."};
+  const heads=rows[0].map(h=>({label:h.trim(),key:norm(h)})).filter(h=>h.key);
+  const dipakai={};
+  const buku=rows.slice(1).map((r,i)=>{
+    const o={_i:i};
+    rows[0].forEach((h,k)=>{const key=norm(h); if(key) o[key]=(r[k]||"").trim();});
+    o.genreList=splitList(o.genre);
+    o.bahasaList=splitList(o.bahasa);
+    o.formatList=[];
+    if(amanUrl(o.link_pdf)) o.formatList.push("PDF");
+    if(amanUrl(o.link_epub)) o.formatList.push("EPUB");
+    o._seriKey=(o.seri||"").trim().toLowerCase();
+    const n=parseFloat((o.urutan_dalam_seri||"").replace(",","."));
+    o._urut=isNaN(n)?null:n;
+    return o;
+  }).filter(b=>b.judul);
+  buku.forEach(b=>{
+    let s=slugify(b.judul),id=s,n=2;
+    while(dipakai[id]) id=s+"-"+(n++);
+    dipakai[id]=1; b._id=id;
+  });
+  if(!buku.length){
+    return {heads,buku,error:"Data terbaca, tetapi tidak ada baris dengan kolom judul terisi. Kolom yang terdeteksi: "+heads.map(h=>h.label).join(", ")+"."};
+  }
+  return {heads,buku,error:""};
+}
+/*PURE_END*/
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+let buku=[], heads=[], tampil=CONFIG.perHalaman, homeScroll=0;
+
+/* ---------- Bahasa judul ---------- */
+const BJ = {
+  id:{label:"Indonesia", key:"judul",          lang:"id"},
+  jp:{label:"Jepang",    key:"judul_jepang",   lang:"ja"},
+  en:{label:"Inggris",   key:"judul_inggris",  lang:"en"}
+};
+let mode="id";
+try{const m=localStorage.getItem("modeJudul"); if(m&&BJ[m]) mode=m;}catch(e){}
+const jd = b => b[BJ[mode].key] || b.judul;
+const jl = b => b[BJ[mode].key] ? BJ[mode].lang : "id";
+
+function buatToggle(){
+  $("#seg").innerHTML=Object.entries(BJ).map(([k,v])=>`<button type="button" data-m="${k}" aria-pressed="${k===mode}">${v.label}</button>`).join("");
+}
+$("#seg").addEventListener("click",e=>{
+  const t=e.target.closest("button"); if(!t) return;
+  mode=t.dataset.m;
+  try{localStorage.setItem("modeJudul",mode)}catch(err){}
+  buatToggle(); tampil=CONFIG.perHalaman; gambar();
+});
+
+/* ---------- Potongan tampilan ---------- */
+function coverHTML(b,opt){
+  opt=opt||{};
+  const c=urlCover(b.cover,opt.w);
+  const t=opt.teks===false?"":esc(jd(b));
+  return c?`<img loading="lazy" referrerpolicy="no-referrer" src="${esc(c)}" alt="" data-t="${t}">`:t;
+}
+/* Jika gambar gagal dimuat, ganti dengan teks judul */
+document.addEventListener("error",e=>{
+  const t=e.target;
+  if(t&&t.tagName==="IMG"&&t.dataset.t!==undefined){
+    const s=document.createElement("span"); s.textContent=t.dataset.t; t.replaceWith(s);
+  }
+},true);
+
+const isPrivat = b => /izin|akses|priv|tertutup/i.test(b.status||"");
+const isPublik = b => !isPrivat(b) && /publik|public|umum/i.test(b.status||"");
+
+function seriBaris(b){
+  if(!b.seri) return "";
+  const n=(b.urutan_dalam_seri||"").trim();
+  return n?`Seri ke-${n} dalam seri ${b.seri}`:`Bagian dari seri ${b.seri}`;
+}
+const pillsHTML = b => b.genreList.length?`<div class="pills">${b.genreList.map(g=>`<span class="pill">${esc(g)}</span>`).join("")}</div>`:"";
+
+function tombolFile(b){
+  const priv=isPrivat(b),pdf=amanUrl(b.link_pdf),epub=amanUrl(b.link_epub),kon=amanUrl(b.kontak);
+  const a=(u,t,alt)=>`<a class="btn${alt?" alt":""}" href="${esc(u)}" target="_blank" rel="noopener noreferrer">${t}</a>`;
+  return (pdf?a(pdf,priv?"Minta akses PDF":"Buka PDF"):"")
+       + (epub?a(epub,priv?"Minta akses EPUB":"Buka EPUB"):"")
+       + (priv&&kon?a(kon,"Hubungi pemilik",true):"");
+}
+function statusHTML(b){
+  let s;
+  if(isPrivat(b)) s='<p class="note warn"><b>File privat.</b> Tombol membuka halaman Google Drive, lalu kamu bisa meminta akses ke pemiliknya.</p>';
+  else if(isPublik(b)) s='<p class="note ok"><b>File publik.</b> Bisa dibuka langsung.</p>';
+  else s='<p class="note">Status file belum diisi.</p>';
+  if(!amanUrl(b.link_pdf)&&!amanUrl(b.link_epub)) s+='<p class="note warn">Belum ada link file untuk buku ini.</p>';
+  return s;
+}
+
+/* ---------- Halaman awal ---------- */
+function isiFilter(){
+  const uniq=a=>[...new Set(a)].filter(Boolean).sort((x,y)=>x.localeCompare(y,"id"));
+  const set=(sel,vals)=>vals.forEach(v=>sel.insertAdjacentHTML("beforeend",`<option>${esc(v)}</option>`));
+  set($("#fGenre"),uniq(buku.flatMap(b=>b.genreList)));
+  set($("#fFormat"),uniq(buku.flatMap(b=>b.formatList)));
+  set($("#fBahasa"),uniq(buku.flatMap(b=>b.bahasaList)));
+}
+
+function urutSeri(a,b){
+  const x=a._urut??Infinity,y=b._urut??Infinity;
+  return x-y||a.judul.localeCompare(b.judul,"id");
+}
+
+function saring(){
+  const q=$("#q").value.trim().toLowerCase();
+  const g=$("#fGenre").value,f=$("#fFormat").value,l=$("#fBahasa").value;
+  let h=buku.filter(b=>{
+    if(g&&!b.genreList.includes(g)) return false;
+    if(f&&!b.formatList.includes(f)) return false;
+    if(l&&!b.bahasaList.includes(l)) return false;
+    if(q){
+      const gabung=[b.judul,b.judul_jepang,b.judul_inggris,b.penulis,b.ilustrator,b.seri,b.genre].join(" ").toLowerCase();
+      if(!q.split(/\s+/).every(k=>gabung.includes(k))) return false;
+    }
+    return true;
+  });
+  const u=$("#urut").value;
+  if(u=="judul") h.sort((a,b)=>jd(a).localeCompare(jd(b),"id"));
+  else if(u=="penulis") h.sort((a,b)=>(a.penulis||"").localeCompare(b.penulis||"","id"));
+  else if(u=="seri") h.sort((a,b)=>(a._seriKey||"￿").localeCompare(b._seriKey||"￿","id")||urutSeri(a,b));
+  else h.sort((a,b)=>b._i-a._i);
+  return h;
+}
+
+function gambar(){
+  const h=saring();
+  $("#count").textContent=`${h.length} buku`;
+  const bagian=h.slice(0,tampil);
+  $("#grid").innerHTML=bagian.length?bagian.map(b=>
+    `<article class="card" data-id="${esc(b._id)}">
+      <div class="cover">${coverHTML(b)}</div>
+      <div class="meta"><b lang="${jl(b)}">${esc(jd(b))}</b><span>${esc(b.penulis)}</span></div>
+    </article>`).join(""):'<div class="empty">Tidak ada buku yang cocok.</div>';
+  $("#more").hidden=h.length<=tampil;
+}
+
+/* ---------- Popup ---------- */
+function popup(b){
+  const sb=seriBaris(b);
+  $("#isi").innerHTML=`<div class="d">
+    <div class="cover">${coverHTML(b)}</div>
+    <div>
+      <h2 lang="${jl(b)}">${esc(jd(b))}</h2>
+      ${sb?`<p class="by">${esc(sb)}</p>`:""}
+      ${pillsHTML(b)}
+      <p class="syn clamp">${esc(b.sinopsis)||"Belum ada sinopsis."}</p>
+      <div class="btns">${tombolFile(b)}<a class="btn alt" href="#/buku/${esc(b._id)}">Selengkapnya &rsaquo;</a></div>
+      ${statusHTML(b)}
+    </div></div>`;
+  $("#dlg").showModal();
+}
+
+/* ---------- Halaman penuh ---------- */
+const LABEL = {judul:"Judul (Indonesia)", link_pdf:"Link PDF", link_epub:"Link EPUB"};
+function labelKolom(h){
+  if(LABEL[h.key]) return LABEL[h.key];
+  const t=h.label.replace(/_/g," ");
+  return t.charAt(0).toUpperCase()+t.slice(1);
+}
+function barisInfo(b){
+  return heads.filter(h=>h.key!=="sinopsis"&&b[h.key]).map(h=>{
+    const v=b[h.key];
+    let isi;
+    if(h.key==="genre") isi=pillsHTML(b)||esc(v);
+    else if(h.key==="status") isi=`<span class="st ${isPrivat(b)?"priv":isPublik(b)?"pub":""}">${isPrivat(b)?"Privat":isPublik(b)?"Publik":esc(v)}</span>`;
+    else if(amanUrl(v)) isi=`<a href="${esc(amanUrl(v))}" target="_blank" rel="noopener noreferrer">Buka tautan</a>`;
+    else isi=esc(v);
+    return `<dt>${esc(labelKolom(h))}</dt><dd>${isi}</dd>`;
+  }).join("");
+}
+function kartuSeri(x,cur){
+  const ini=x===cur;
+  return `<a class="sc${ini?" cur":""}" href="#/buku/${esc(x._id)}"${ini?' aria-current="page"':""}>
+    <div class="scv">${coverHTML(x,{w:400,teks:false})}</div>
+    <div class="sg">${x.urutan_dalam_seri?`<small>Seri ke-${esc(x.urutan_dalam_seri)}</small>`:""}<b lang="${jl(x)}">${esc(jd(x))}</b></div>
+  </a>`;
+}
+function tampilDetail(b){
+  if($("#dlg").open) $("#dlg").close();
+  if(!$("#home").hidden) homeScroll=window.scrollY;
+  $("#home").hidden=true; $("#page").hidden=false;
+  const sb=seriBaris(b);
+  const anggota=b._seriKey?buku.filter(x=>x._seriKey===b._seriKey).sort(urutSeri):[];
+  $("#page").innerHTML=`<div class="wrap">
+    <a class="back" href="#/">&lsaquo; Kembali ke katalog</a>
+    <div class="dp">
+      <div class="cover">${coverHTML(b,{w:800})}</div>
+      <div>
+        <h2 lang="${jl(b)}">${esc(jd(b))}</h2>
+        ${sb?`<p class="by">${esc(sb)}</p>`:""}
+        ${pillsHTML(b)}
+        <div class="btns">${tombolFile(b)}</div>
+        ${statusHTML(b)}
+      </div>
+    </div>
+    <h3>Sinopsis</h3>
+    <p class="syn">${esc(b.sinopsis)||"Belum ada sinopsis."}</p>
+    <h3>Informasi lengkap</h3>
+    <dl class="info">${barisInfo(b)}</dl>
+    ${anggota.length>1?`<h3>Seri ${esc(b.seri)}</h3><div class="series">${anggota.map(x=>kartuSeri(x,b)).join("")}</div>`:""}
+  </div>`;
+  document.title=jd(b)+" | "+CONFIG.judulSitus;
+  window.scrollTo(0,0);
+}
+
+function tampilHome(){
+  const baru=$("#home").hidden;
+  if($("#dlg").open) $("#dlg").close();
+  $("#page").hidden=true; $("#home").hidden=false;
+  document.title=CONFIG.judulSitus;
+  if(baru){ gambar(); window.scrollTo(0,homeScroll); }
+}
+
+/* ---------- Rute ---------- */
+function rute(){
+  const m=location.hash.match(/^#\/buku\/(.+)$/);
+  if(m){
+    const id=decodeURIComponent(m[1]);
+    const b=buku.find(x=>x._id===id);
+    if(b){ tampilDetail(b); return; }
+  }
+  tampilHome();
+}
+window.addEventListener("hashchange",rute);
+
+/* ---------- Event ---------- */
+["#q","#fGenre","#fFormat","#fBahasa","#urut"].forEach(s=>$(s).addEventListener("input",()=>{tampil=CONFIG.perHalaman;gambar()}));
+$("#more").onclick=()=>{tampil+=CONFIG.perHalaman;gambar()};
+$("#grid").addEventListener("click",e=>{
+  const k=e.target.closest(".card"); if(!k) return;
+  const b=buku.find(x=>x._id===k.dataset.id); if(b) popup(b);
+});
+$("#tutup").onclick=()=>$("#dlg").close();
+$("#dlg").addEventListener("click",e=>{if(e.target===$("#dlg"))$("#dlg").close()});
+
+/* ---------- Muat data ---------- */
+async function muat(){
+  let teks;
+  if(CONFIG.SHEET_CSV_URL){
+    try{
+      const res=await fetch(CONFIG.SHEET_CSV_URL,{cache:"no-store"});
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      teks=await res.text();
+    }catch(e){
+      $("#grid").innerHTML='<div class="empty">Gagal memuat data dari Sheet. Periksa SHEET_CSV_URL dan pastikan sheet sudah dipublikasikan sebagai CSV.</div>';
+      return;
+    }
+  }else teks=DEMO;
+
+  const hasil=bangunBuku(teks);
+  if(hasil.error){
+    $("#grid").innerHTML=`<div class="empty">${esc(hasil.error)}</div>`;
+    return;
+  }
+  buku=hasil.buku; heads=hasil.heads;
+  isiFilter();
+  gambar();
+  rute();
+}
+
+document.title=CONFIG.judulSitus;
+$("#judulSitus").textContent=CONFIG.judulSitus;
+$("#subSitus").textContent=CONFIG.subSitus;
+$("#foot").textContent=CONFIG.catatanKaki;
+buatToggle();
+muat();
+</script>
+</body>
+</html>
