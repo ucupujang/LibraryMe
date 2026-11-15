@@ -61,6 +61,25 @@ a.card{text-decoration:none;color:inherit}
 .grid.list .cover{aspect-ratio:auto;width:96px;flex:none;align-self:stretch;padding:0;font-size:0;border-radius:0}
 .grid.list .meta{flex:1;min-width:0;padding:10px 14px;overflow:hidden}
 .grid.list .ex{display:block;margin-top:4px}
+/* Tampilan kotak ringkas: sampul memenuhi kartu, judul di atas gradasi gelap (seperti "jilid lainnya dalam seri ini") */
+.grid:not(.list) .card{display:block;aspect-ratio:2/3}
+.grid:not(.list) .cover{position:absolute;inset:0;aspect-ratio:auto;padding:0;font-size:0;border-radius:0}
+.grid:not(.list) .meta{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:34px 8px 8px;display:flex;flex-direction:column;background:linear-gradient(to top,rgba(0,0,0,.88),rgba(0,0,0,.55) 55%,rgba(0,0,0,0));color:#fff}
+.grid:not(.list) .meta b{order:2;font-size:.8rem;line-height:1.25;-webkit-line-clamp:3}
+.grid:not(.list) .meta>span,.grid:not(.list) .m1{order:1}
+.grid:not(.list) .meta>span,.grid:not(.list) .m1>span{color:rgba(255,255,255,.8);font-size:.68rem}
+.grid:not(.list) .m1{margin-top:0;gap:2px 6px}
+.grid:not(.list) .sb{color:#fff;border-color:rgba(255,255,255,.7);font-size:.62rem;padding:0 6px}
+@media (hover:hover){
+  /* kartu tanpa keterangan bahasa: sampul diberi lapisan abu-abu saat disentuh */
+  .grid:not(.list) .card.tb:hover::after{content:"";position:absolute;inset:0;z-index:1;background:rgba(128,128,128,.4);pointer-events:none}
+}
+@media (max-width:640px){
+  .grid:not(.list){grid-template-columns:repeat(3,1fr);gap:10px}
+  .grid:not(.list) .meta{padding:26px 6px 6px}
+  .grid:not(.list) .meta b{font-size:.72rem}
+  .grid:not(.list) .meta>span,.grid:not(.list) .m1>span{font-size:.62rem}
+}
 .empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:48px 16px}
 .more{display:block;margin:0 auto 48px;padding:10px 22px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;font:inherit;cursor:pointer}
 .sb{display:inline-block;font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:99px;border:1px solid currentColor;color:var(--muted)}
@@ -114,6 +133,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 .sg{position:absolute;left:0;right:0;bottom:0;padding:34px 8px 8px;background:linear-gradient(to top,rgba(0,0,0,.88),rgba(0,0,0,.55) 55%,rgba(0,0,0,0))}
 .sg small{display:block;font-size:.68rem;opacity:.8}
 .sg b{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-size:.8rem;line-height:1.25}
+@media (max-width:640px){.series{grid-template-columns:repeat(3,1fr);gap:10px}.sg{padding:26px 6px 6px}.sg b{font-size:.72rem}}
 footer{text-align:center;color:var(--muted);font-size:.8rem;padding:0 16px 28px}
 </style>
 </head>
@@ -415,7 +435,7 @@ function seriBarisHTML(b){
   if(!b.seriNama) return "";
   const nama=`<a href="#/seri/${esc(b._seriSlug)}">${esc(b.seriNama)}</a>`;
   const n=(b.urutan_dalam_seri||"").trim();
-  return n?`Jilid ke-${esc(n)} dalam seri ${nama}`:`Bagian dari seri ${nama}`;
+  return n?`Buku ke-${esc(n)} dalam seri ${nama}`:`Bagian dari seri ${nama}`;
 }
 const pillsHTML = (list,sat) => list.length?`<div class="pills${sat?" sat":""}">${list.map(g=>`<span class="pill">${esc(g)}</span>`).join("")}</div>`:"";
 
@@ -435,13 +455,13 @@ function statusHTML(b){
   return s;
 }
 
-/* Kartu buku (beranda, halaman seri, buku lepas). opt.jilid = tampilkan "Jilid ke-N" */
+/* Kartu buku (beranda, halaman seri, buku lepas). opt.jilid = tampilkan "Buku ke-N" */
 function kartuBuku(b,opt){
   opt=opt||{};
   const n=(b.urutan_dalam_seri||"").trim();
-  const baris=opt.jilid&&n?`Jilid ke-${esc(n)}`:esc(b.penulis);
+  const baris=opt.jilid&&n?`Buku ke-${esc(n)}`:esc(b.penulis);
   /* Baris tambahan, hanya terlihat pada tampilan daftar */
-  const ln=b.seriNama?(n?`Jilid ke-${n} · ${b.seriNama}`:b.seriNama):"";
+  const ln=b.seriNama?(n?`Buku ke-${n} · ${b.seriNama}`:b.seriNama):"";
   return `<article class="card${kelasBahasa(b.bahasaList)}" data-id="${esc(b._id)}" style="--sh:${esc(bayangan(b.bahasaList))}">
     <div class="cover">${coverHTML(b,{w:opt.w})}</div>
     <div class="meta"><b lang="${jl(b)}">${esc(jd(b))}</b><span>${baris}</span><div class="ex">${ln?`<span class="ln">${esc(ln)}</span>`:""}${pillsHTML(b.genreList,true)}</div></div>
@@ -521,7 +541,7 @@ function kartuSeriDaftar(s,w){
   const ln=[s.penulis,s.ilustrator].filter(Boolean).join(" · ");
   return `<a class="card${kelasBahasa(s.bahasaList)}" href="#/seri/${esc(s.slug)}" style="--sh:${esc(bayangan(s.bahasaList))}">
     <div class="cover">${coverHTML(s.sampul,{w:w||300,teks:s.nama})}</div>
-    <div class="meta"><b>${esc(s.nama)}</b><div class="m1"><span>${s.vols.length} jilid</span>${badgeSeri(s.status)}</div><div class="ex">${ln?`<span class="ln">${esc(ln)}</span>`:""}${pillsHTML(s.genreList,true)}</div></div>
+    <div class="meta"><b>${esc(s.nama)}</b><div class="m1"><span>${s.vols.length} buku</span>${badgeSeri(s.status)}</div><div class="ex">${ln?`<span class="ln">${esc(ln)}</span>`:""}${pillsHTML(s.genreList,true)}</div></div>
   </a>`;
 }
 function gambarSeri(){
@@ -555,9 +575,9 @@ function tampilSeri(s){
     <a class="back" href="#/seri">&lsaquo; Daftar Seri</a>
     <h2 class="sh">${esc(s.nama)}</h2>
     ${orang?`<p class="by">${orang}</p>`:""}
-    <p class="by">${s.vols.length} jilid ${badgeSeri(s.status)}</p>
+    <p class="by">${s.vols.length} buku ${badgeSeri(s.status)}</p>
     ${pillsHTML(s.genreList)}
-    <h3>Jilid</h3>
+    <h3>Daftar buku</h3>
     <div class="grid">${s.vols.map(b=>kartuBuku(b,{jilid:true})).join("")}</div>
   </div>`;
   document.title=s.nama+" | "+CONFIG.judulSitus;
@@ -603,7 +623,7 @@ function kartuSeri(x,cur){
   const ini=x===cur;
   return `<a class="sc${ini?" cur":""}" href="#/buku/${esc(x._id)}"${ini?' aria-current="page"':""}>
     <div class="scv">${coverHTML(x,{w:300,teks:false})}</div>
-    <div class="sg">${x.urutan_dalam_seri?`<small>Jilid ke-${esc(x.urutan_dalam_seri)}</small>`:""}<b lang="${jl(x)}">${esc(jd(x))}</b></div>
+    <div class="sg">${x.urutan_dalam_seri?`<small>Buku ke-${esc(x.urutan_dalam_seri)}</small>`:""}<b lang="${jl(x)}">${esc(jd(x))}</b></div>
   </a>`;
 }
 function kembaliInfo(dari){
