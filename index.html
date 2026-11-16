@@ -61,6 +61,8 @@ a.card{text-decoration:none;color:inherit}
 .grid.list .cover{aspect-ratio:auto;width:96px;flex:none;align-self:stretch;padding:0;font-size:0;border-radius:0}
 .grid.list .meta{flex:1;min-width:0;padding:10px 14px;overflow:hidden}
 .grid.list .ex{display:block;margin-top:4px}
+/* Buku tanpa file (link PDF dan EPUB kosong): sampul hitam-putih dan sedikit pudar */
+.card.nf .cover{filter:grayscale(1);opacity:.78}
 /* Tampilan kotak ringkas: sampul memenuhi kartu, judul di atas gradasi gelap (seperti "jilid lainnya dalam seri ini") */
 .grid:not(.list) .card{display:block;aspect-ratio:2/3}
 .grid:not(.list) .cover{position:absolute;inset:0;aspect-ratio:auto;padding:0;font-size:0;border-radius:0}
@@ -102,8 +104,22 @@ a.card{text-decoration:none;color:inherit}
 /* Popup */
 dialog{border:none;border-radius:14px;padding:0;max-width:720px;width:calc(100% - 24px);max-height:calc(100dvh - 24px);overflow:auto;background:var(--card);color:var(--ink)}
 dialog::backdrop{background:rgba(0,0,0,.5)}
-.d{display:grid;grid-template-columns:200px 1fr;gap:20px;padding:20px}
-@media (max-width:560px){.d{grid-template-columns:1fr}.d .cover{max-width:200px}}
+.d{display:grid;grid-template-columns:200px 1fr;column-gap:20px;padding:20px;align-items:start}
+.d>.cover{grid-column:1;grid-row:1/3;padding:0;font-size:.85rem}
+.d>.dt{grid-column:2;grid-row:1}
+.d>.db{grid-column:2;grid-row:2;margin-top:10px}
+/* Ponsel: sampul sedang sejajar dengan judul dan keterangan seri, isi lain di bawahnya */
+@media (max-width:560px){
+  .d{grid-template-columns:104px 1fr;column-gap:12px;padding:16px}
+  .d>.cover{grid-row:1;width:104px;max-width:none}
+  .d>.dt{grid-row:1;padding-right:18px}
+  .d>.db{grid-column:1/-1;grid-row:2;margin-top:12px}
+  .d h2{font-size:1.05rem}
+  .d .by{font-size:.84rem;margin-bottom:0}
+  .d .pills{margin-bottom:8px}
+  .d .syn{margin-bottom:10px;font-size:.92rem}
+  .d .note{margin-top:6px}
+}
 .d h2{margin:0 0 2px;font-size:1.25rem;line-height:1.3}
 .d .by{color:var(--muted);margin:0 0 10px;font-size:.92rem}
 .clamp{display:-webkit-box;-webkit-line-clamp:8;-webkit-box-orient:vertical;overflow:hidden}
@@ -418,6 +434,7 @@ document.addEventListener("error",e=>{
   }
 },true);
 
+const adaFile = b => !!(amanUrl(b.link_pdf)||amanUrl(b.link_epub));
 const isPrivat = b => /izin|akses|priv|tertutup/i.test(b.status||"");
 const isPublik = b => !isPrivat(b) && /publik|public|umum/i.test(b.status||"");
 
@@ -447,11 +464,12 @@ function tombolFile(b){
        + (priv&&kon?a(kon,"Hubungi pemilik",true):"");
 }
 function statusHTML(b){
+  /* Tanpa link file, status publik/privat tidak berlaku: hanya tampilkan keterangan "belum ada link" */
+  if(!adaFile(b)) return '<p class="note warn">Belum ada link file untuk buku ini.</p>';
   let s;
   if(isPrivat(b)) s='<p class="note warn"><b>File privat.</b> Tombol membuka halaman Google Drive, lalu kamu bisa meminta akses ke pemiliknya.</p>';
   else if(isPublik(b)) s='<p class="note ok"><b>File publik.</b> Bisa dibuka langsung.</p>';
   else s='<p class="note">Status file belum diisi.</p>';
-  if(!amanUrl(b.link_pdf)&&!amanUrl(b.link_epub)) s+='<p class="note warn">Belum ada link file untuk buku ini.</p>';
   return s;
 }
 
@@ -462,7 +480,7 @@ function kartuBuku(b,opt){
   const baris=opt.jilid&&n?`Buku ke-${esc(n)}`:esc(b.penulis);
   /* Baris tambahan, hanya terlihat pada tampilan daftar */
   const ln=b.seriNama?(n?`Buku ke-${n} · ${b.seriNama}`:b.seriNama):"";
-  return `<article class="card${kelasBahasa(b.bahasaList)}" data-id="${esc(b._id)}" style="--sh:${esc(bayangan(b.bahasaList))}">
+  return `<article class="card${kelasBahasa(b.bahasaList)}${adaFile(b)?"":" nf"}" data-id="${esc(b._id)}" style="--sh:${esc(bayangan(b.bahasaList))}">
     <div class="cover">${coverHTML(b,{w:opt.w})}</div>
     <div class="meta"><b lang="${jl(b)}">${esc(jd(b))}</b><span>${baris}</span><div class="ex">${ln?`<span class="ln">${esc(ln)}</span>`:""}${pillsHTML(b.genreList,true)}</div></div>
   </article>`;
@@ -539,7 +557,7 @@ function tampilHome(){
 /* ---------- Daftar Seri ---------- */
 function kartuSeriDaftar(s,w){
   const ln=[s.penulis,s.ilustrator].filter(Boolean).join(" · ");
-  return `<a class="card${kelasBahasa(s.bahasaList)}" href="#/seri/${esc(s.slug)}" style="--sh:${esc(bayangan(s.bahasaList))}">
+  return `<a class="card${kelasBahasa(s.bahasaList)}${s.vols.some(adaFile)?"":" nf"}" href="#/seri/${esc(s.slug)}" style="--sh:${esc(bayangan(s.bahasaList))}">
     <div class="cover">${coverHTML(s.sampul,{w:w||300,teks:s.nama})}</div>
     <div class="meta"><b>${esc(s.nama)}</b><div class="m1"><span>${s.vols.length} buku</span>${badgeSeri(s.status)}</div><div class="ex">${ln?`<span class="ln">${esc(ln)}</span>`:""}${pillsHTML(s.genreList,true)}</div></div>
   </a>`;
@@ -589,15 +607,26 @@ function popup(b){
   const sb=seriBarisHTML(b);
   $("#isi").innerHTML=`<div class="d">
     <div class="cover">${coverHTML(b,{w:500})}</div>
-    <div>
+    <div class="dt">
       <h2 lang="${jl(b)}">${esc(jd(b))}</h2>
       ${sb?`<p class="by">${sb}</p>`:""}
+    </div>
+    <div class="db">
       ${pillsHTML(b.genreList)}
       <p class="syn clamp">${esc(b.sinopsis)||"Belum ada sinopsis."}</p>
       <div class="btns">${tombolFile(b)}<a class="btn alt" href="#/buku/${esc(b._id)}">Selengkapnya &rsaquo;</a></div>
       ${statusHTML(b)}
     </div></div>`;
   $("#dlg").showModal();
+  pasKeLayar();
+}
+/* Kecilkan batas baris sinopsis sampai popup muat di layar tanpa perlu digulir */
+function pasKeLayar(){
+  const dlg=$("#dlg"), syn=dlg.querySelector(".syn");
+  if(!syn) return;
+  let n=8;
+  syn.style.webkitLineClamp=n;
+  while(dlg.scrollHeight>dlg.clientHeight+1&&n>1){ n--; syn.style.webkitLineClamp=n; }
 }
 
 /* ---------- Halaman penuh buku ---------- */
@@ -608,7 +637,7 @@ function labelKolom(h){
   return t.charAt(0).toUpperCase()+t.slice(1);
 }
 function barisInfo(b){
-  return heads.filter(h=>h.key!=="sinopsis"&&b[h.key]).map(h=>{
+  return heads.filter(h=>h.key!=="sinopsis"&&b[h.key]&&!(h.key==="status"&&!adaFile(b))).map(h=>{
     const v=b[h.key];
     let isi;
     if(h.key==="genre") isi=pillsHTML(b.genreList)||esc(v);
