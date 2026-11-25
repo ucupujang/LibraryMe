@@ -126,6 +126,27 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 .x{position:absolute;right:12px;top:8px;background:none;border:none;color:var(--muted);font-size:1.6rem;cursor:pointer;z-index:1}
 
 /* Halaman penuh buku dan halaman seri */
+.fm{max-width:760px;margin:0 auto;padding:20px 16px 48px}
+.fm h2{margin:0 0 6px}.fm .by{margin-bottom:18px}
+.fm fieldset{border:1px solid var(--line);border-radius:12px;background:var(--card);margin:0 0 16px;padding:14px 16px 16px}
+.fm legend{padding:0 8px;font-weight:700;font-size:.95rem}
+.fm label{display:block;font-size:.88rem;color:var(--muted);margin:10px 0 4px}
+.fm label i{color:#d9480f;font-style:normal}
+.fm input[type=text],.fm input[type=number],.fm input[type=url],.fm select,.fm textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;min-width:0}
+.fm textarea{min-height:110px;resize:vertical}
+.fm .dua{display:grid;grid-template-columns:1fr 130px;gap:0 12px}
+.fm .cek{display:flex;flex-wrap:wrap;gap:6px 16px}.fm .cek label{display:flex;align-items:center;gap:6px;margin:4px 0;color:var(--ink)}
+.fm .hint{font-size:.8rem;color:var(--muted);margin:4px 0 0}
+.fm .pv{display:flex;gap:14px;align-items:center;margin-top:12px;padding:10px;border:1px dashed var(--line);border-radius:10px}
+.fm .pv .cover{width:84px;flex:none;border-radius:6px;padding:4px;font-size:.7rem}
+.fm .pv .cover img{width:100%;height:100%;object-fit:cover}
+.fm .peringatan{color:var(--warn);font-size:.85rem;margin-top:6px}
+.fm .pesan{padding:12px 14px;border-radius:10px;margin:0 0 16px}
+.fm .pesan.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);border:1px solid var(--ok)}
+.fm .pesan.err{background:color-mix(in srgb,#e03131 12%,transparent);border:1px solid #e03131}
+.fm .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.fm button[type=submit]{padding:11px 24px;border:0;border-radius:8px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;cursor:pointer}
+.fm button[disabled]{opacity:.6;cursor:wait}
 .wrap{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
 .wrap .grid{padding:0;max-width:none}
 .back{display:inline-block;margin-bottom:16px;text-decoration:none;font-weight:600}
@@ -162,6 +183,7 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:0 16px 28px}
 <nav class="nav" aria-label="Navigasi utama">
   <a href="#/" id="nBeranda">Beranda</a>
   <a href="#/seri" id="nSeri">Daftar Seri</a>
+  <a href="#/kirim" id="nKirim">Kirim Buku</a>
 </nav>
 
 <!-- Beranda -->
@@ -201,6 +223,9 @@ footer{text-align:center;color:var(--muted);font-size:.8rem;padding:0 16px 28px}
   </div>
 </section>
 
+<!-- Formulir kirim buku -->
+<section id="kirim" hidden></section>
+
 <!-- Halaman penuh buku dan halaman seri -->
 <section id="page" hidden></section>
 
@@ -216,6 +241,8 @@ const CONFIG = {
   // URL CSV dari Google Sheet yang dipublikasikan (File > Bagikan > Publikasikan ke web > CSV).
   // Kosongkan untuk melihat data contoh.
   SHEET_CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRy2JBmpWFJpHiSLl38r78EY6MtSO7x9FE9t-9lYQVoUb_UD8zdK-dHoZDKhbw3JPzSBBrPhLswpHGr/pub?gid=499449472&single=true&output=csv",
+  // URL Web App Google Apps Script untuk formulir "Kirim Buku" (lihat langkah deploy). Kosongkan untuk menonaktifkan pengiriman.
+  FORM_URL: "https://script.google.com/macros/s/AKfycbzk2S5a1BxO_4Gh1FNVuBGZpvp4Ikb0XQWwVYUqZxWwAaKbwB_64WhS4g8sVrwfcGcyTQ/exec",
   hasilAwal: 6,        // jumlah buku yang tampil pertama di beranda (terbaru dulu) dan saat mencari atau memakai filter
   hasilTambah: 12,     // tambahan tiap tombol "Muat lebih banyak" diklik (6, 18, 30, 42, ...)
   penandaTunggal: "tunggal", // isi kolom seri untuk buku lepas (kolom seri kosong juga dianggap lepas)
@@ -331,6 +358,19 @@ function bangunBuku(teks,penanda){
   });
   const lepas=buku.filter(b=>!b._seriKey);
   return {heads,buku,seriList,lepas,error:""};
+}
+/* Ganti nomor jilid di ujung judul: "Judul Jilid 1" -> "Judul Jilid 2". Jika tidak ada nomor, judul dikembalikan apa adanya. */
+function gantiNomor(t,n){
+  t=String(t||"").trim(); if(!t) return "";
+  const zen=String(n).replace(/\d/g,d=>String.fromCharCode(0xFF10+ +d));
+  const pola=[
+    [/(第\s*)[\d０-９]+(\s*[巻卷]\s*)$/, (m,a,b)=>a+n+b],
+    [/((?:jilid|vol(?:ume)?\.?|buku|book|bagian|part|ke-?|#)\s*)[\d０-９]+(?:[.,]\d+)?\s*$/i, (m,a)=>a+n],
+    [/([\s　])[\d０-９]+(?:[.,]\d+)?\s*$/, (m,a)=>a+n],
+    [/([^\d０-９\s])[\d０-９]+\s*$/, (m,a)=>a+n]
+  ];
+  for(const [re,f] of pola) if(re.test(t)) return t.replace(re,f);
+  return t;
 }
 /*PURE_END*/
 
@@ -486,7 +526,7 @@ function kartuBuku(b,opt){
 }
 
 /* ---------- Tampilan dan rute ---------- */
-const VIEWS={home:"#home",daftar:"#daftar",page:"#page"};
+const VIEWS={home:"#home",daftar:"#daftar",page:"#page",kirim:"#kirim"};
 let aktif="", posisi={}, lastHash="";
 function lihat(v){
   if(aktif==="home"||aktif==="daftar") posisi[aktif]=window.scrollY;
@@ -494,7 +534,7 @@ function lihat(v){
   aktif=v;
 }
 function navAktif(id){
-  ["nBeranda","nSeri"].forEach(x=>{
+  ["nBeranda","nSeri","nKirim"].forEach(x=>{
     const e=$("#"+x);
     if(x===id) e.setAttribute("aria-current","page"); else e.removeAttribute("aria-current");
   });
@@ -705,9 +745,152 @@ function rute(){
     if(s){ tampilSeri(s); return; }
   }
   if(h==="#/seri"){ tampilDaftar(); return; }
+  if(h==="#/kirim"){ tampilKirim(); return; }
   tampilHome();
 }
 window.addEventListener("hashchange",rute);
+
+/* ---------- Formulir kirim buku ---------- */
+const KOLOM_USULAN=["judul","judul_jepang","judul_inggris","penulis","ilustrator","seri","urutan_dalam_seri","sinopsis","genre","bahasa","tahun","cover","link_pdf","link_epub","status","kontak","status_seri","pengirim"];
+let kirimDibangun=false, kirimMulai=0, kotor={};
+const OTOMATIS=["judul","judul_jepang","judul_inggris","penulis","ilustrator","genre","bahasa","status_seri"];
+function tampilKirim(){
+  lihat("kirim"); navAktif("nKirim");
+  document.title="Kirim Buku | "+CONFIG.judulSitus;
+  if(!kirimDibangun) bangunForm();
+  else{ // segarkan saran seri jika data baru dimuat
+    $("#dlSeri").innerHTML=seriList.map(s=>`<option value="${esc(s.nama)}">`).join("");
+  }
+  kirimMulai=Date.now();
+  window.scrollTo(0,0);
+}
+function bangunForm(){
+  kirimDibangun=true;
+  const bhs=[...new Set([...buku.flatMap(b=>b.bahasaList),"Indonesia","Inggris","Jepang"])];
+  const f=(n,l,o={})=>`<label for="f_${n}">${l}${o.wajib?' <i>*</i>':''}</label><input type="${o.type||"text"}" id="f_${n}" name="${n}" ${o.wajib?"required":""} ${o.extra||""} ${o.ph?`placeholder="${esc(o.ph)}"`:""}>${o.hint?`<div class="hint">${o.hint}</div>`:""}`;
+  $("#kirim").innerHTML=`<form class="fm" id="frm" novalidate autocomplete="off">
+    <h2>Kirim Buku</h2>
+    <p class="by">Punya light novel yang belum ada di katalog? Isi formulir ini. Usulanmu akan dicek dulu sebelum ditambahkan.</p>
+    <div id="pesanForm"></div>
+    <fieldset><legend>1. Seri</legend>
+      <div class="dua"><div>
+        <label for="f_seri">Nama seri (kosongkan atau isi "${esc(CONFIG.penandaTunggal)}" untuk buku lepas)</label>
+        <input type="text" id="f_seri" name="seri" list="dlSeri" placeholder="Ketik, lalu pilih dari saran jika seri sudah ada">
+        <datalist id="dlSeri">${seriList.map(s=>`<option value="${esc(s.nama)}">`).join("")}</datalist>
+      </div><div>
+        <label for="f_urutan_dalam_seri">Buku ke-</label>
+        <input type="number" id="f_urutan_dalam_seri" name="urutan_dalam_seri" min="1" step="1" value="1">
+      </div></div>
+      <div id="pvSeri" class="pv" hidden></div>
+      <div id="dupe" class="peringatan" hidden></div>
+    </fieldset>
+    <fieldset><legend>2. Data buku</legend>
+      ${f("judul","Judul (Indonesia)",{wajib:1})}
+      ${f("judul_jepang","Judul (Jepang)")}
+      ${f("judul_inggris","Judul (Inggris)")}
+      <div class="dua"><div>${f("penulis","Penulis")}</div><div>${f("tahun","Tahun terbit",{type:"text",ph:"2021"})}</div></div>
+      ${f("ilustrator","Ilustrator")}
+      <label for="f_sinopsis">Sinopsis</label><textarea id="f_sinopsis" name="sinopsis"></textarea>
+      ${f("genre","Genre",{hint:"Pisahkan dengan titik koma, contoh: Fantasi; Petualangan"})}
+      <label>Bahasa file</label><div class="cek" id="cekBhs">${bhs.map(x=>`<label><input type="checkbox" value="${esc(x)}"> ${esc(x)}</label>`).join("")}</div>
+      <label for="f_status_seri">Status seri</label>
+      <select id="f_status_seri" name="status_seri"><option value="">Tidak tahu</option><option>Ongoing</option><option>Completed</option><option>Hiatus</option><option>Dibatalkan</option></select>
+      ${f("cover","Link sampul (opsional)",{type:"url",hint:"Link gambar sampul dari Google Drive atau situs lain."})}
+    </fieldset>
+    <fieldset><legend>3. File</legend>
+      ${f("link_pdf","Link PDF (Google Drive)",{type:"url"})}
+      ${f("link_epub","Link EPUB (Google Drive)",{type:"url"})}
+      <div class="hint">Isi minimal salah satu. Pastikan akses file diatur ke "Siapa saja yang memiliki link", atau pilih Privat di bawah.</div>
+      <label for="f_status">Akses file</label>
+      <select id="f_status" name="status"><option value="publik">Publik (siapa saja bisa membuka)</option><option value="privat">Privat (pengunjung harus minta izin)</option></select>
+      ${f("kontak","Kontak untuk minta izin (opsional)",{hint:"Link WhatsApp, email, atau akun media sosial. Dipakai jika akses file Privat."})}
+    </fieldset>
+    <fieldset><legend>4. Pengirim</legend>
+      ${f("pengirim","Nama atau kontakmu (opsional)",{hint:"Supaya admin bisa menghubungi jika ada yang perlu ditanyakan."})}
+      <label class="cek" style="margin-top:12px"><span style="display:flex;gap:8px;align-items:flex-start;color:var(--ink)"><input type="checkbox" id="f_hak" style="margin-top:4px"> <span>Saya berhak membagikan file ini dan bertanggung jawab atas link yang saya kirim.</span></span></label>
+    </fieldset>
+    <div class="hp" aria-hidden="true"><label>Jangan diisi <input type="text" name="website" id="f_website" tabindex="-1" autocomplete="off"></label></div>
+    <button type="submit" id="kirimBtn">Kirim usulan</button>
+  </form>`;
+  const frm=$("#frm");
+  kotor={};
+  frm.addEventListener("input",e=>{ if(e.isTrusted&&e.target.name) kotor[e.target.name]=true; if(e.target.closest("#cekBhs")) kotor.bahasa=true; });
+  $("#f_seri").addEventListener("input",()=>isiDariSeri(true));
+  $("#f_seri").addEventListener("change",()=>isiDariSeri(true));
+  $("#f_urutan_dalam_seri").addEventListener("input",()=>isiDariSeri(false));
+  frm.addEventListener("submit",kirimForm);
+  isiDariSeri(true);
+}
+const _setNilai=(n,v)=>{const el=$("#f_"+n); if(el&&!kotor[n]) el.value=v||"";};
+function seriDipilih(){
+  const k=($("#f_seri").value||"").replace(/\s+/g," ").trim().toLowerCase();
+  if(!k||k===(CONFIG.penandaTunggal||"tunggal").toLowerCase()) return null;
+  return seriList.find(s=>s.key===k)||null;
+}
+function isiDariSeri(gantiSeri){
+  const s=seriDipilih();
+  const nEl=$("#f_urutan_dalam_seri");
+  const pv=$("#pvSeri");
+  if(gantiSeri){
+    if(s){
+      const maks=Math.max(0,...s.vols.map(v=>v._urut||0));
+      if(!kotor.urutan_dalam_seri) nEl.value=Math.floor(maks)+1;
+      pv.hidden=false;
+      pv.innerHTML=`<div class="cover">${coverHTML(s.sampul,{w:300,teks:s.nama})}</div><div><b>${esc(s.nama)}</b><div class="hint">Seri sudah ada di katalog: ${s.vols.length} buku${s.penulis?` &middot; ${esc(s.penulis)}`:""}. Data seri diisi otomatis di bawah, silakan dikoreksi jika perlu.</div></div>`;
+    }else{
+      pv.hidden=true; pv.innerHTML="";
+    }
+  }
+  const n=parseFloat(nEl.value)||1;
+  if(s){
+    const dasar=[...s.vols].filter(v=>v._urut!=null).sort((a,b)=>b._urut-a._urut)[0]||s.vols[s.vols.length-1];
+    const uniq=k=>[...new Set(s.vols.map(v=>v[k]).filter(Boolean))][0]||"";
+    ["judul","judul_jepang","judul_inggris"].forEach(k=>_setNilai(k,gantiNomor(dasar[k]||"",n)));
+    if(gantiSeri){
+      _setNilai("penulis",s.penulis); _setNilai("ilustrator",s.ilustrator);
+      _setNilai("genre",s.genreList.join("; ")); _setNilai("status_seri",s.status||"");
+      if(!kotor.bahasa) $("#cekBhs").querySelectorAll("input").forEach(c=>{c.checked=s.bahasaList.includes(c.value)});
+    }
+    const ada=s.vols.some(v=>v._urut===n);
+    const d=$("#dupe"); d.hidden=!ada;
+    if(ada) d.textContent=`Buku ke-${n} dalam seri ini sudah ada di katalog. Pastikan ini bukan duplikat.`;
+  }else{
+    $("#dupe").hidden=true;
+    if(gantiSeri){
+      OTOMATIS.forEach(k=>{ if(!kotor[k]){ const el=$("#f_"+k); if(el) el.value=""; } });
+      if(!kotor.bahasa) $("#cekBhs").querySelectorAll("input").forEach(c=>{c.checked=false});
+    }
+  }
+}
+async function kirimForm(e){
+  e.preventDefault();
+  const box=$("#pesanForm"), btn=$("#kirimBtn");
+  const tampilPesan=(t,k)=>{box.innerHTML=`<div class="pesan ${k}">${esc(t)}</div>`;window.scrollTo(0,0)};
+  const v=n=>($("#f_"+n).value||"").trim();
+  if(!CONFIG.FORM_URL) return tampilPesan("Pengiriman belum diaktifkan oleh pengelola situs.","err");
+  if(!v("judul")) return tampilPesan("Judul (Indonesia) wajib diisi.","err");
+  if(!v("link_pdf")&&!v("link_epub")) return tampilPesan("Isi minimal salah satu link: PDF atau EPUB.","err");
+  for(const k of ["link_pdf","link_epub"]) if(v(k)&&!idDrive(v(k))) return tampilPesan("Link file harus berupa link Google Drive (drive.google.com/file/d/...).","err");
+  if(v("cover")&&!/^https?:\/\//i.test(v("cover"))) return tampilPesan("Link sampul harus diawali http:// atau https://.","err");
+  if(!$("#f_hak").checked) return tampilPesan("Centang pernyataan hak membagikan file terlebih dahulu.","err");
+  const data=new URLSearchParams();
+  KOLOM_USULAN.forEach(k=>{
+    if(k==="bahasa") data.set(k,[...$("#cekBhs").querySelectorAll("input:checked")].map(c=>c.value).join("; "));
+    else data.set(k,v(k));
+  });
+  data.set("website",$("#f_website").value);
+  data.set("waktu_isi",String(Date.now()-kirimMulai));
+  btn.disabled=true; btn.textContent="Mengirim...";
+  try{
+    await fetch(CONFIG.FORM_URL,{method:"POST",mode:"no-cors",body:data});
+    $("#frm").reset(); kotor={}; isiDariSeri(true);
+    tampilPesan("Terima kasih! Usulanmu sudah terkirim dan akan dicek sebelum ditambahkan ke katalog.","ok");
+    kirimMulai=Date.now();
+  }catch(err){
+    tampilPesan("Gagal mengirim. Periksa koneksi internet lalu coba lagi.","err");
+  }
+  btn.disabled=false; btn.textContent="Kirim usulan";
+}
 
 /* ---------- Event ---------- */
 ["#q","#fGenre","#fFormat","#fBahasa"].forEach(s=>$(s).addEventListener("input",()=>{tampil=CONFIG.hasilAwal;gambar()}));
