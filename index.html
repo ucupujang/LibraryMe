@@ -216,8 +216,7 @@ const CONFIG = {
   // URL CSV dari Google Sheet yang dipublikasikan (File > Bagikan > Publikasikan ke web > CSV).
   // Kosongkan untuk melihat data contoh.
   SHEET_CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRy2JBmpWFJpHiSLl38r78EY6MtSO7x9FE9t-9lYQVoUb_UD8zdK-dHoZDKhbw3JPzSBBrPhLswpHGr/pub?gid=499449472&single=true&output=csv",
-  jumlahTerbaru: 6,    // jumlah buku di bagian "Baru ditambahkan" pada beranda
-  hasilAwal: 6,        // jumlah hasil awal saat mencari atau memakai filter
+  hasilAwal: 6,        // jumlah buku yang tampil pertama di beranda (terbaru dulu) dan saat mencari atau memakai filter
   hasilTambah: 12,     // tambahan tiap tombol "Muat lebih banyak" diklik (6, 18, 30, 42, ...)
   penandaTunggal: "tunggal", // isi kolom seri untuk buku lepas (kolom seri kosong juga dianggap lepas)
   catatanKaki: "Pastikan kamu punya hak untuk mengakses dan membagikan file yang ditautkan."
@@ -531,8 +530,11 @@ function saring(){
 function gambar(){
   let h,more=false;
   if(!filterAktif()){
-    h=[...buku].sort((a,b)=>b._i-a._i).slice(0,CONFIG.jumlahTerbaru);
-    $("#count").textContent=`Baru ditambahkan (${h.length} dari ${buku.length} buku). Gunakan pencarian atau Daftar Seri untuk melihat seluruh koleksi.`;
+    /* Tanpa filter: buku terbaru dulu, tombol "Muat lebih banyak" menambah yang lebih lama */
+    const urut=[...buku].sort((a,b)=>b._i-a._i);
+    more=urut.length>tampil;
+    h=urut.slice(0,tampil);
+    $("#count").textContent=`Terbaru ditambahkan. Menampilkan ${h.length} dari ${buku.length} buku.`;
   }else{
     h=saring().sort((a,b)=>jd(a).localeCompare(jd(b),"id"));
     const total=h.length;
